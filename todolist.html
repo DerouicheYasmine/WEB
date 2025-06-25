@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Board</title>
+    <link rel="stylesheet" href="todolist.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- jsPDF and html2canvas for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="app-title">
+                <h1>Mobile App Projects</h1>
+                <div class="avatar-group">
+                    <div class="avatar">
+                        <img src="https://ui-avatars.com/api/?name=J+D&background=random" alt="User avatar">
+                    </div>
+                    <div class="avatar">
+                        <img src="https://ui-avatars.com/api/?name=M+S&background=random" alt="User avatar">
+                    </div>
+                    <div class="avatar">
+                        <img src="https://ui-avatars.com/api/?name=A+R&background=random" alt="User avatar">
+                    </div>
+                    <span class="more-avatars">+7</span>
+                </div>
+                <button class="invite-btn">+ Invite</button>
+                <button id="export-btn" class="export-btn"><i class="fas fa-download"></i> Export CSV</button>
+                <button id="export-pdf-btn" class="export-btn pdf-btn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            </div>
+            <div class="app-subtitle">Health Mobile App</div>
+        </header>
+
+        <div class="board-container">
+            <div class="board-columns">
+                <!-- TODO Column -->
+                <div class="board-column">
+                    <div class="column-header">
+                        <div class="column-title">
+                            <h3>TODO</h3>
+                            <div class="task-count">3</div>
+                        </div>
+                        <button class="column-options"><i class="fas fa-ellipsis-h"></i></button>
+                    </div>
+                    <div class="column-content" id="todo-column">
+                        <!-- Cards will be dynamically added here -->
+                    </div>
+                    <div class="add-card-container">
+                        <button class="add-card-btn" data-column="todo">+ Add Card</button>
+                    </div>
+                </div>
+
+                <!-- IN WORK Column -->
+                <div class="board-column">
+                    <div class="column-header">
+                        <div class="column-title">
+                            <h3>IN WORK</h3>
+                            <div class="task-count">2</div>
+                        </div>
+                        <button class="column-options"><i class="fas fa-ellipsis-h"></i></button>
+                    </div>
+                    <div class="column-content" id="in-work-column">
+                        <!-- Cards will be dynamically added here -->
+                    </div>
+                    <div class="add-card-container">
+                        <button class="add-card-btn" data-column="in-work">+ Add Card</button>
+                    </div>
+                </div>
+
+                <!-- IN PROGRESS Column -->
+                <div class="board-column">
+                    <div class="column-header">
+                        <div class="column-title">
+                            <h3>IN PROGRESS</h3>
+                            <div class="task-count">3</div>
+                        </div>
+                        <button class="column-options"><i class="fas fa-ellipsis-h"></i></button>
+                    </div>
+                    <div class="column-content" id="in-progress-column">
+                        <!-- Cards will be dynamically added here -->
+                    </div>
+                    <div class="add-card-container">
+                        <button class="add-card-btn" data-column="in-progress">+ Add Card</button>
+                    </div>
+                </div>
+
+                <!-- COMPLETED Column -->
+                <div class="board-column">
+                    <div class="column-header">
+                        <div class="column-title">
+                            <h3>COMPLETED</h3>
+                            <div class="task-count">3</div>
+                        </div>
+                        <button class="column-options"><i class="fas fa-ellipsis-h"></i></button>
+                    </div>
+                    <div class="column-content" id="completed-column">
+                        <!-- Cards will be dynamically added here -->
+                    </div>
+                    <div class="add-card-container">
+                        <button class="add-card-btn" data-column="completed">+ Add Card</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">Add New Task</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Title</label>
+                    <input type="text" id="task-title" placeholder="Task title" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" placeholder="Task description"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="task-category">Category</label>
+                        <select id="task-category">
+                            <option value="design">Design</option>
+                            <option value="dev">Dev</option>
+                            <option value="research">Research</option>
+                            <option value="planning">Planning</option>
+                            <option value="content">Content</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority">
+                            <option value="low">Low</option>
+                            <option value="mid">Mid</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="task-progress">Progress</label>
+                        <input type="number" id="task-progress" min="0" max="10" value="0">
+                        <span class="progress-label">/10</span>
+                    </div>
+                    <div class="form-group half">
+                        <label for="task-due-date">Due Date</label>
+                        <select id="task-due-date">
+                            <option value="now">Now</option>
+                            <option value="today">Today</option>
+                            <option value="tomorrow">Tomorrow</option>
+                            <option value="next-week">Next Week</option>
+                            <option value="sep">Sep</option>
+                            <option value="oct">Oct</option>
+                            <option value="nov">Nov</option>
+                            <option value="dec">Dec</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="task-assignees">Assignees</label>
+                    <div class="assignee-selection">
+                        <div class="assignee-option" data-id="1">
+                            <img src="https://ui-avatars.com/api/?name=J+D&background=random" alt="User avatar">
+                        </div>
+                        <div class="assignee-option" data-id="2">
+                            <img src="https://ui-avatars.com/api/?name=M+S&background=random" alt="User avatar">
+                        </div>
+                        <div class="assignee-option" data-id="3">
+                            <img src="https://ui-avatars.com/api/?name=A+R&background=random" alt="User avatar">
+                        </div>
+                        <div class="assignee-option" data-id="4">
+                            <img src="https://ui-avatars.com/api/?name=T+K&background=random" alt="User avatar">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" id="save-task-btn">Save Task</button>
+                    <button type="button" id="cancel-task-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="todolist.js"></script>
+</body>
+</html>

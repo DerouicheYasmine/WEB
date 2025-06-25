@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outil de Notes - Exportation PDF</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            min-height: 100vh;
+            background-color: #f9fafb;
+        }
+        .note-container {
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #editor {
+            min-height: 50vh;
+            resize: vertical;
+            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-success {
+            background-color: #10b981;
+            transition: background-color 0.3s;
+        }
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        #preview {
+            display: none;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Outil de Notes</h1>
+            <p class="text-gray-600">Prenez vos notes et exportez-les facilement en PDF</p>
+        </header>
+
+        <div class="note-container p-4 md:p-6 rounded-lg mb-6">
+            <div class="mb-4">
+                <label for="note-title" class="block text-sm font-medium text-gray-700 mb-1">Titre de la note</label>
+                <input type="text" id="note-title" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Titre de votre note" value="Ma note">
+            </div>
+            
+            <div class="mb-4">
+                <label for="editor" class="block text-sm font-medium text-gray-700 mb-1">Contenu</label>
+                <textarea id="editor" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Écrivez vos notes ici..."></textarea>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 justify-between items-center">
+                <div>
+                    <button id="save-btn" class="btn-primary text-white font-medium py-2 px-4 rounded-md">
+                        💾 Sauvegarder
+                    </button>
+                    <button id="cancel-btn" class="btn-primary text-white font-medium py-2 px-4 rounded-md hidden">
+                        🚫 Annuler
+                    </button>
+                    <span id="save-status" class="ml-2 text-sm text-gray-500"></span>
+                </div>
+                <div>
+                    <button id="export-pdf" class="btn-success text-white font-medium py-2 px-4 rounded-md flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Exporter en PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Notes sauvegardées</h2>
+            <div id="saved-notes" class="space-y-2">
+                <!-- Les notes sauvegardées seront affichées ici -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Section cachée pour la génération PDF -->
+    <div id="pdf-content" class="hidden">
+        <h1 id="pdf-title" class="text-2xl font-bold mb-4"></h1>
+        <div id="pdf-body"></div>
+    </div>
+
+    <script>
+        let editingNoteId = null; // Variable pour suivre l'ID de la note en cours d'édition
+
+        // Sauvegarde ou modification d'une note
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            const titre = document.getElementById('note-title').value.trim();
+            const contenu = document.getElementById('editor').value.trim();
+            const date = new Date().toISOString().slice(0, 19).replace("T", " "); // Format DATETIME SQL
+
+            if (titre && contenu) {
+                try {
+                    const formData = new URLSearchParams({
+                        titre: titre,
+                        contenu: contenu,
+                        date: date
+                    });
+
+                    // Ajouter l'ID si on est en mode édition
+                    if (editingNoteId) {
+                        formData.append('id', editingNoteId);
+                    }
+
+                    const response = await fetch('NotesController.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    });
+
+                    const result = await response.text();
+                    document.getElementById('save-status').textContent = result;
+
+                    // Réinitialiser le formulaire
+                    document.getElementById('note-title').value = 'Ma note';
+                    document.getElementById('editor').value = '';
+                    document.getElementById('save-btn').textContent = '💾 Sauvegarder';
+                    document.getElementById('cancel-btn').classList.add('hidden');
+                    editingNoteId = null;
+
+                    loadNotes(); // Recharger les notes
+                } catch (error) {
+                    document.getElementById('save-status').textContent = "Erreur lors de l'enregistrement.";
+                }
+            } else {
+                document.getElementById('save-status').textContent = "Veuillez remplir tous les champs.";
+            }
+        });
+
+        // Annuler l'édition
+        document.getElementById('cancel-btn').addEventListener('click', () => {
+            document.getElementById('note-title').value = 'Ma note';
+            document.getElementById('editor').value = '';
+            document.getElementById('save-btn').textContent = '💾 Sauvegarder';
+            document.getElementById('cancel-btn').classList.add('hidden');
+            editingNoteId = null;
+            document.getElementById('save-status').textContent = '';
+        });
+
+        // Chargement des notes
+        async function loadNotes() {
+            try {
+                const response = await fetch('NotesController.php');
+                const notesHtml = await response.text();
+                document.getElementById('saved-notes').innerHTML = notesHtml;
+            } catch (error) {
+                document.getElementById('saved-notes').innerHTML = "<p class='text-red-500'>Impossible de charger les notes.</p>";
+            }
+        }
+
+        // Récupérer une note pour modification
+        async function editNote(id) {
+            try {
+                const response = await fetch(`NotesController.php?id=${id}`);
+                const note = await response.json();
+
+                if (note.error) {
+                    alert(note.error);
+                    return;
+                }
+
+                // Remplir le formulaire avec les données de la note
+                document.getElementById('note-title').value = note.TitreNotes;
+                document.getElementById('editor').value = note.ContenuNotes;
+                document.getElementById('save-btn').textContent = '✏️ Mettre à jour';
+                document.getElementById('cancel-btn').classList.remove('hidden');
+                editingNoteId = id;
+                document.getElementById('save-status').textContent = '';
+            } catch (error) {
+                document.getElementById('save-status').textContent = "Erreur lors de la récupération de la note.";
+            }
+        }
+
+        // Suppression d'une note
+        async function deleteNote(id) {
+            if (confirm("Êtes-vous sûr de vouloir supprimer cette note ?")) {
+                try {
+                    const response = await fetch('NotesController.php', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'id=' + encodeURIComponent(id)
+                    });
+                    const result = await response.text();
+                    alert(result);
+                    loadNotes(); // Recharger les notes
+                } catch (error) {
+                    alert("Erreur lors de la suppression.");
+                }
+            }
+        }
+
+        // Exportation en PDF
+        document.getElementById('export-pdf').addEventListener('click', () => {
+            const title = document.getElementById('note-title').value.trim();
+            const content = document.getElementById('editor').value.trim();
+
+            if (!title || !content) {
+                alert("Veuillez d'abord remplir le titre et le contenu de la note.");
+                return;
+            }
+
+            document.getElementById('pdf-title').textContent = title;
+            document.getElementById('pdf-body').innerHTML = marked.parse(content);
+
+            const opt = {
+                margin: 0.5,
+                filename: `${title.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(document.getElementById('pdf-content')).save();
+        });
+
+        // Charger les notes au démarrage
+        window.addEventListener('DOMContentLoaded', loadNotes);
+    </script>
+</body>
+</html>
